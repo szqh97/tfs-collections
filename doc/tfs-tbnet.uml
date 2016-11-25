@@ -105,4 +105,47 @@ class TCPComponent {
     - TCPConnection* _connection
     - int64_t _startConnectTime
 }
+
+class connection {
+    + Connection(Socket *socket, IPacketStreamer *streamer, IServerAdapter *serverAdapter)
+    + {abstract} ~Connection()
+    + void setServer(bool isServer)
+    + void setIOComponent(IOComponent *ioc)
+    + IOComponent *getIOComponent()
+    + void setDefaultPacketHandler(IPacketHandler *ph)
+    + bool postPacket(Packet *packet, IPacketHandler *packetHandler = NULL, void *args = NULL, bool noblocking = true)
+    + bool handlePacket(DataBuffer *input, PacketHeader *header)
+    + bool checkTimeout(int64_t now)
+    + {abstract} bool writeData()
+    + {abstract} bool readData()
+    + {abstract} void setWriteFinishClose(bool v)
+    + void setQueueTimeout(int queueTimeout)
+    + {abstract} void clearOutputBuffer()
+    + void setQueueLimit(int limit)
+    + bool isConnectState()
+    + uint64_t getServerId()
+    + uint64_t getPeerId()
+    + int getLocalPort()
+    + int getInputQueueLength()
+    + int getOutputQueueLength()
+    # void disconnect()
+
+	# IPacketHandler *_defaultPacketHandler
+    # bool _isServer
+    # IOComponent *_iocomponent
+    # Socket *_socket
+    # IPacketStreamer *_streamer
+    # IServerAdapter *_serverAdapter
+    # PacketQueue _outputQueue
+    # PacketQueue _inputQueue
+    # PacketQueue _myQueue
+    # tbsys::CThreadCond _outputCond
+    # ChannelPool _channelPool
+    # int _queueTimeout
+    # int _queueTotalSize
+    # int _queueLimit
+}
+
 @enduml
+
+
