@@ -56,6 +56,7 @@ class EPollSocketEvent {
 
 SocketEvent <|-- EPollSocketEvent
 
+
 IOComponent ..> Transport
 class IOComponent {
     + enum TBSTSUS
@@ -93,6 +94,7 @@ class IOComponent {
 }
 
 IOComponent <|-- TCPComponent
+IOComponent o--> TCPConection
 class TCPComponent {
     + TCPComponent(Transport* owner, Socket* socket, IPacketStreamer* streamer, IServerAdapter* serverAddapter)
     + bool init(Bool isServer)
@@ -106,6 +108,34 @@ class TCPComponent {
     - int64_t _startConnectTime
 }
 
+TCPConnection <|-- connection
+TCPConnection *-->DataBuffer
+TCPConnection *-->PacketHeader
+class TCPConnection {
+    + TCPConnection(Socket *socket, IPacketStreamer *streamer, IServerAdapter *serverAdapter)
+    + ~TCPConnection()
+    + bool writeData()
+    + bool readData()
+    + void setWriteFinishClose(bool v)
+    + void clearOutputBuffer()
+    + void clearInputBuffer()
+    + void setDisconnState()
+
+	- DataBuffer _output
+	- DataBuffer _input
+	- PacketHeader _packetHeader
+	- bool _gotHeader
+	- bool _writeFinishClose;
+
+}
+
+connection *--> IPacketHandler
+connection *--> IOComponent
+connection *--> Socket
+connection *--> IPacketStreamer
+connection *--> IServerAdapter
+connection o--> PacketQueue
+connection o--> ChannelPool
 class connection {
     + Connection(Socket *socket, IPacketStreamer *streamer, IServerAdapter *serverAdapter)
     + {abstract} ~Connection()
