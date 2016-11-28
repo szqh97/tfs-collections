@@ -108,7 +108,7 @@ class TCPComponent {
     - int64_t _startConnectTime
 }
 
-TCPConnection <|-- connection
+connection<|--TCPConnection 
 TCPConnection *-->DataBuffer
 TCPConnection *-->PacketHeader
 class TCPConnection {
@@ -253,6 +253,35 @@ class ChannelPool {
     - static atomic_t _globalTotalCount
 }
 
+Transport o..> EPollSocketEvent 
+Transport *..> IOComponent
+class Transport {
+     + Transport()
+     + bool start()
+     + bool stop()
+     + bool wait()
+     + void run(tbsys::CThread *thread, void *arg)
+     + IOComponent *listen(const char *spec, IPacketStreamer *streamer, IServerAdapter *serverAdapter)
+     + Connection *connect(const char *spec, IPacketStreamer *streamer, bool autoReconn = false)
+     + bool disconnect(Connection *conn)
+     + void addComponent(IOComponent *ioc, bool readOn, bool writeOn)
+     + void removeComponent(IOComponent *ioc)
+     + bool* getStop()
+     - int parseAddr(char *src, char **args, int cnt)
+     - void eventLoop(SocketEvent *socketEvent)
+     - void timeoutLoop()
+     - void destroy()
+
+     - EPollSocketEvent _socketEvent
+     - tbsys::CThread _readWriteThread
+     - tbsys::CThread _timeoutThread
+     - bool _stop
+     - IOComponent *_delListHead, *_delListTail
+     - IOComponent *_iocListHead, *_iocListTail
+     - bool _iocListChanged
+     - int _iocListCount
+     - tbsys::CThreadMutex _iocsMutex
+}
 
 
 @enduml
