@@ -182,6 +182,10 @@ class PacketHeader {
     + int _dataLen
 }
 
+class IPacketHandler {
+	# {abstract} HPRetCode handlePacket(Packet *packet, void *args)
+}
+
 Packet o..>PacketHeader
 Packet *..>Channel
 class Packet {
@@ -283,6 +287,138 @@ class Transport {
      - tbsys::CThreadMutex _iocsMutex
 }
 
+IPacketStreamer o..>IPacketFactory
+class IPacketStreamer {
+    + IPacketStreamer()
+    + IPacketStreamer(IPacketFactory *factory)
+    + {abstract} bool getPacketInfo(DataBuffer *input, PacketHeader *header, bool *broken)
+    + {abstract} Packet *decode(DataBuffer *input, PacketHeader *header)
+    + {abstract} bool encode(Packet *packet, DataBuffer *output)
+    + bool existPacketHeader()
+
+    # IPacketFactory *_factory
+    # bool _existPacketHeader
+}
+
+class IPacketFactory{
+	+ {abstract} Packet *createPacket(int pcode)
+}
+
+IPacketStreamer <|-- DefaultPacketStreamer
+class DefaultPacketStreamer {
+    + DefaultPacketStreamer();
+    + DefaultPacketStreamer(IPacketFactory *factory);
+    + ~DefaultPacketStreamer();
+    + void setPacketFactory(IPacketFactory *factory);
+    + bool getPacketInfo(DataBuffer *input, PacketHeader *header, bool *broken);
+    + Packet *decode(DataBuffer *input, PacketHeader *header);
+    + bool encode(Packet *packet, DataBuffer *output);
+    + {static} void setPacketFlag(int flag); 
+
+    + {static} int _nPacketFlag
+}
+
+
+IOComponent<|--TCPAccepter
+TCPAcceptor *..>IPacketStreamer
+TCPAcceptor *..>IServerAdapter
+class TCPAcceptor {
+    + TCPAcceptor(Transport *owner, Socket *socket,IPacketStreamer *streamer, IServerAdapter *serverAdapter)
+	+ bool init(bool isServer = false);
+    + bool handleReadEvent();
+    + bool handleWriteEvent()
+    + void checkTimeout(int64_t now);
+    - IPacketStreamer *_streamer
+    - IServerAdapter *_serverAdapter
+}
+
+class IServerAdapter {
+    + {abstract} IPacketHandler::HPRetCode handlePacket(Connection *connection, Packet *packet)
+    + {abstract} bool handleBatchPacket(Connection *connection, PacketQueue &packetQueue)
+    + IServerAdapter()
+    + {abstract} ~IServerAdapter() 
+    + void setBatchPushPacket(bool value)
+
+	- bool _batchPushPacket
+}
+
+ConnectionManager *..> Transport
+ConnectionManager *..> IPacketStreamer
+ConnectionManager *..> IPacketHandler
+class ConnectionManager {
+    + ConnectionManager(Transport *transport, IPacketStreamer *streamer, IPacketHandler *packetHandler)
+    + Connection *connect(uint64_t serverId, IPacketHandler *packetHandler, int queueLimit, int queueTimeout)
+    + void disconnect(uint64_t serverId)
+    + void setDefaultQueueLimit(uint64_t serverId, int queueLimit)
+    + void setDefaultQueueTimeout(uint64_t serverId, int queueTimeout)
+    + void setDefaultPacketHandler(uint64_t serverId, IPacketHandler *packetHandler)
+    + bool sendPacket(uint64_t serverId, Packet *packet, IPacketHandler *packetHandler = NULL, void *args = NULL, bool noblocking = true)
+    + void cleanup()
+    + Connection *getConnection(uint64_t serverId)
+    + {static} bool isAlive(uint64_t serverId)
+    - Transport *_transport
+    - IPacketStreamer *_streamer
+    - IPacketHandler *_packetHandler
+    - int _queueLimit
+    - int _queueTimeout
+    - int _status
+    - TBNET_CONN_MAP _connectMap
+    - tbsys::CThreadMutex _mutex
+}
+
+DefaultPacketStreamer<|..HttpPacketStreamer
+class HttpPacketStreamer {
+	+ HttpPacketStreamer()
+	+ HttpPacketStreamer(IPacketFactory *factory)
+	+ bool getPacketInfo(DataBuffer *input, PacketHeader *header, bool *broken);
+    + void setHttpPacketCode(int code)
+	- int _httpPacketCode
+}
+
+class DefaultHttpPacketFactory {
+	+ Packet *createPacket(int pCode)
+}
+
+HttpRequsetPacket *..> Connection
+Packet <|-- HttpRequestPacket
+class HtpRequestPacket {
+    + bool operator()(const char* s1, const char* s2) const
+    + HttpRequestPacket()
+    + ~HttpRequestPacket()
+    + void countDataLen()
+    + bool encode(DataBuffer *output)
+    + bool decode(DataBuffer *input, PacketHeader *header)
+    + char *getQuery()
+    + bool isKeepAlive()
+    + const char *findHeader(const char *name)
+    + Connection *getConnection()
+    + void setConnection(Connection *connection)
+    - char *_strHeader
+    - char *_strQuery
+    - bool _isKeepAlive
+    - int _method
+    - PSTR_MAP _headerMap
+    - Connection *_connection
+}
+
+Packet <|-- HttpResponsePacket
+class HttpResponsePacket {
+    + HttpResponsePacket()
+    + ~HttpResponsePacket()
+    + void countDataLen()
+    + bool encode(DataBuffer *output)
+    + bool decode(DataBuffer *input, PacketHeader *header)
+    + void setHeader(const char *name, const char *value)
+    + void setStatus(bool status, const char *statusMessage = NULL)
+    + void setBody(const char *body, int len)
+    + void setKeepAlive(bool keepAlive)
+    - bool _status
+    - char *_statusMessage
+    - char *_body
+    - int _bodyLen
+    - STRING_MAP _headerMap
+    - bool _isKeepAlive
+}
 
 @enduml
 
